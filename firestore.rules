@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rides/{rideId} {
+      allow read: if true;
+      allow create: if request.resource.data.dateTime > request.time;
+      allow update: if request.resource.data.dateTime > request.time;
+      allow delete: if resource.data.dateTime < request.time;
+    }
+  }
+} 

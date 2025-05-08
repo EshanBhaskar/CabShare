@@ -1,0 +1,8 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme, simplified for Compose-based app -->
+    <style name="Theme.CabShare" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">@color/ic_launcher_background</item>
+        <item name="android:navigationBarColor">@color/black</item>
+    </style>
+</resources>

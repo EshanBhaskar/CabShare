@@ -1,0 +1,28 @@
+{
+  "client_id": "f0d42e11-abce-43c3-94d6-00ab706fc954",
+  "authorization_user_agent": "DEFAULT",
+  "redirect_uri": "msauth://com.project.cabshare/callback",
+  "account_mode": "SINGLE",
+  "authorities": [
+    {
+      "type": "AAD",
+      "audience": {
+        "type": "AzureADMultipleOrgs"
+      }
+    }
+  ],
+  "browser_safelist": [
+    {
+      "browser_package_name": "com.android.chrome",
+      "browser_signature_hashes": [
+        "7fmduHKTdHHrlMvldlEqAIlSfii1tl35bxj1OXN5Ve8c4lU6URVu4xtSHc3BVZxS6WWJnxMDhIfQN0N0K2NDJg=="
+      ]
+    }
+  ],
+  "use_browser": true,
+  "broker_redirect_uri_registered": false,
+  "http": {
+    "connect_timeout": 10000,
+    "read_timeout": 30000
+  }
+} 
