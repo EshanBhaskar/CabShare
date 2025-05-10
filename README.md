@@ -1,48 +1,113 @@
 # CabShare - Cab Sharing App for IIT Patna
 
-CabShare is an app that helps IIT Patna students find and share cab rides with each other.
+CabShare is a modern Android application designed to help IIT Patna students find and share cab rides with each other. The app facilitates ride sharing between the campus and some of the most frequent destinations (Patna Junction, Patna Airport and Bihta Railway Station) and vice-versa.
 
-## Microsoft Authentication Setup
+## Features
 
-This app uses Microsoft Authentication Library (MSAL) to authenticate users with their @iitp.ac.in email addresses. To set up the authentication:
+- **Secure Authentication**
+  - Microsoft Authentication with @iitp.ac.in email restriction
+  - Secure user profile management
+  - Automatic session management
 
-1. Register the app in the Azure portal:
+- **Ride Management**
+  - Create and join cab rides
+  - Real-time ride status updates
+  - Ride request and approval system
 
-   - Go to [https://portal.azure.com](https://portal.azure.com) and sign in
+- **User Interface**
+  - Intuitive navigation
+  - Real-time notifications tab
+
+- **Real-time Features**
+  - Live ride updates
+  - Real-time passenger list updates
+  - Automatic ride cleanup for past rides
+
+## Tech Stack
+
+- **Language**: Kotlin
+- **UI Framework**: Jetpack Compose
+- **Authentication**: Microsoft Authentication Library (MSAL)
+- **Backend**: Firebase
+- **Background Tasks**: WorkManager
+- **State Management**: Kotlin Flow
+- **Minimum SDK**: 26 (Android 8.0)
+- **Target SDK**: 34 (Android 14)
+
+## Prerequisites
+
+- Android Studio Hedgehog (2023.1.1) or newer
+- JDK 17 or newer
+- Android SDK 34
+- Google Services configuration
+- Microsoft Azure account for authentication
+
+## Setup Instructions
+
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/EshanBhaskar/CabShare.git
+   cd CabShare
+   ```
+
+2. **Microsoft Authentication Setup**
+   - Go to [Azure Portal](https://portal.azure.com)
    - Navigate to "Microsoft Entra ID" (formerly Azure Active Directory)
-   - Select "App registrations" from the left menu
-   - Click "+ New registration"
+   - Create a new app registration:
+     - Name: "CabShare"
+     - Supported account types: "Accounts in any organizational directory"
+     - Redirect URI: `msauth://com.project.cabshare/callback`
+   - Copy the Application (client) ID
+   - Update `app/src/main/java/com/project/cabshare/auth/AuthConfig.kt` with your client ID
 
-2. Configure your app registration:
+3. **Firebase Setup**
+   - Create a new Firebase project
+   - Add your Android app to the Firebase project
+   - Download `google-services.json` and place it in the `app` directory
+   - Enable Firestore Database
+   - Set up Firestore security rules
 
-   - Name: "CabShare"
-   - Supported account types: "Accounts in any organizational directory (Any Azure AD directory - Multitenant) and personal Microsoft accounts"
-   - Redirect URI: Select "Public client/native (mobile & desktop)" and enter `msauth://com.project.cabshare/callback`
-   - Click "Register"
+4. **Build and Run**
+   - Open the project in Android Studio
+   - Sync project with Gradle files
+   - Run the app on an emulator or physical device
 
-3. Configure authentication:
+## Project Structure
 
-   - After registration, go to "Authentication" in the left menu
-   - Under "Advanced settings", set "Allow public client flows" to "Yes"
-   - Click "Save"
+```
+app/
+├── src/
+│   ├── main/
+│   │   ├── java/com/project/cabshare/
+│   │   │   ├── auth/           # Authentication related code
+│   │   │   ├── data/           # Data layer and repositories
+│   │   │   ├── models/         # Data models
+│   │   │   ├── ui/             # UI components
+│   │   │   │   ├── screens/    # App screens
+│   │   │   │   ├── theme/      # UI theme
+│   │   │   │   └── viewmodels/ # ViewModels
+│   │   │   ├── workers/        # Background workers
+│   │   │   └── utils/          # Utility classes
+│   │   └── res/                # Resources
+│   └── test/                   # Unit tests
+└── build.gradle                # App-level build configuration
+```
 
-4. Get your client ID:
-   - On the "Overview" page of your app registration, copy the "Application (client) ID"
-   - In the app code, open `app/src/main/java/com/project/cabshare/auth/AuthConfig.kt`
-   - Replace `your_microsoft_client_id` with your actual client ID
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## Troubleshooting
 
 If you encounter dependency resolution issues:
 
-1. Make sure your project includes JitPack repository in settings.gradle.kts
+1. Make sure your project includes JitPack repository in `settings.gradle.kts`
 2. Use MSAL version 2.3.5 or newer
-3. Make sure you have explicitly added the required dependencies:
+3. Ensure you have explicitly added the required dependencies:
    - `com.microsoft.device:display-mask:0.4.0`
    - `io.opentelemetry:opentelemetry-api:1.18.0`
    - `io.opentelemetry:opentelemetry-sdk:1.18.0`
-
-## Features
-
-- Microsoft Authentication with @iitp.ac.in email restriction
-- More features coming soon
