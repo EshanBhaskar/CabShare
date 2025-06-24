@@ -315,8 +315,15 @@ class RideViewModel(application: Application) : AndroidViewModel(application) {
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                rideRepository.deleteRide(rideId)
-                onSuccess()
+                // Get the ride first to ensure it exists
+                val ride = rideRepository.getRide(rideId)
+                if (ride != null) {
+                    // Delete the ride with manual deletion flag
+                    rideRepository.deleteRide(rideId, isManualDeletion = true)
+                    onSuccess()
+                } else {
+                    _error.value = "Ride not found"
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error deleting ride", e)
                 _error.value = "Failed to delete ride: ${e.message}"

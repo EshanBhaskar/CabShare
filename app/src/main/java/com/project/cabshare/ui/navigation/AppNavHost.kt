@@ -14,35 +14,8 @@ import com.project.cabshare.auth.AuthViewModel
 import com.project.cabshare.models.RideDirection
 import com.project.cabshare.ui.screens.*
 import com.project.cabshare.ui.viewmodels.RideViewModel
+import com.project.cabshare.ui.viewmodels.RideHistoryViewModel
 import android.util.Log
-
-/**
- * Navigation routes for the app
- */
-object AppRoutes {
-    // Auth related routes
-    const val SPLASH = "splash"
-    const val LOGIN = "login"
-    const val USER_PROFILE = "user_profile"
-    const val MAIN = "main"
-    
-    // Ride related routes
-    object RideList {
-        const val route = "ride_list"
-        const val directionArg = "direction"
-        fun createRoute(direction: String) = "$route/$direction"
-    }
-    
-    object RideDetails {
-        const val route = "ride_details"
-        const val rideIdArg = "rideId"
-        fun createRoute(rideId: String) = "$route/$rideId"
-    }
-    
-    object MyRides {
-        const val route = "my_rides"
-    }
-}
 
 /**
  * Main navigation component for the app
@@ -58,6 +31,7 @@ fun AppNavHost(
     }
     val authViewModel: AuthViewModel = viewModel(viewModelStoreOwner)
     val rideViewModel: RideViewModel = viewModel(viewModelStoreOwner)
+    val rideHistoryViewModel: RideHistoryViewModel = viewModel(viewModelStoreOwner)
     
     NavHost(
         navController = navController,
@@ -78,13 +52,11 @@ fun AppNavHost(
                     // Navigate based on whether this is a returning user
                     if (isReturningUser) {
                         // Returning users go directly to main screen
-                        // Log.d("AppNavHost", "Returning user - skipping profile setup")
                         navController.navigate(AppRoutes.MAIN) {
                             popUpTo(0) { inclusive = true }
                         }
                     } else {
                         // New users go to profile setup first
-                        // Log.d("AppNavHost", "New user - going to profile setup")
                         navController.navigate(AppRoutes.USER_PROFILE) {
                             popUpTo(AppRoutes.LOGIN) { inclusive = true }
                         }
@@ -163,6 +135,33 @@ fun AppNavHost(
                 navController = navController,
                 authViewModel = authViewModel,
                 rideViewModel = rideViewModel
+            )
+        }
+        
+        // Ride History Screen
+        composable(AppRoutes.RideHistory.route) {
+            RideHistoryScreen(
+                navController = navController,
+                authViewModel = authViewModel,
+                rideHistoryViewModel = rideHistoryViewModel
+            )
+        }
+        
+        // Ride History Details Screen
+        composable(
+            route = "${AppRoutes.RideHistoryDetails.route}/{${AppRoutes.RideHistoryDetails.rideIdArg}}",
+            arguments = listOf(
+                navArgument(AppRoutes.RideHistoryDetails.rideIdArg) {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val rideId = backStackEntry.arguments?.getString(AppRoutes.RideHistoryDetails.rideIdArg) ?: ""
+            RideHistoryDetailsScreen(
+                navController = navController,
+                rideId = rideId,
+                authViewModel = authViewModel,
+                rideHistoryViewModel = rideHistoryViewModel
             )
         }
     }

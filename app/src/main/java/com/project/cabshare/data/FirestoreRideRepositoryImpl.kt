@@ -6,6 +6,8 @@ import com.google.firebase.firestore.FieldValue
 import com.project.cabshare.models.Ride
 import com.project.cabshare.models.RideDirection
 import com.project.cabshare.models.UserProfile
+import com.project.cabshare.models.RideHistory
+import com.project.cabshare.models.RideCompletionStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -41,6 +43,7 @@ class FirestoreRideRepositoryImpl : RideRepository {
     private val ridesCollection = firestore.collection("rides")
     private val requestsCollection = firestore.collection("joinRequests")
     private val notificationsCollection = firestore.collection("notifications")
+    private val historyRepository: RideHistoryRepository = FirestoreRideHistoryRepositoryImpl()
     
     // Observable flows
     private val _userRidesFlow = MutableStateFlow<List<Ride>>(emptyList())
@@ -235,12 +238,39 @@ class FirestoreRideRepositoryImpl : RideRepository {
         }
     }
     
-    override suspend fun deleteRide(rideId: String) {
+    override suspend fun deleteRide(rideId: String, isManualDeletion: Boolean) {
         withContext(Dispatchers.IO) {
             try {
-                // First, get the ride to check for associated join requests
+                // First, get the ride to check for associated join requests and save to history
                 val rideDoc = ridesCollection.document(rideId).get().await()
                 if (rideDoc.exists()) {
+                    val ride = rideDoc.toObject(Ride::class.java)
+                    if (ride != null) {
+                        // Save to history first
+                        val rideHistory = RideHistory(
+                            rideId = rideId,
+                            source = ride.source,
+                            destination = ride.destination,
+                            dateTime = ride.dateTime,
+                            maxPassengers = ride.maxPassengers,
+                            creator = ride.creator,
+                            creatorEmail = ride.creatorEmail,
+                            direction = ride.direction,
+                            notes = ride.notes,
+                            passengers = ride.passengers,
+                            trainNumber = ride.trainNumber,
+                            trainName = ride.trainName,
+                            flightNumber = ride.flightNumber,
+                            flightName = ride.flightName,
+                            completionStatus = if (isManualDeletion) RideCompletionStatus.CANCELLED else RideCompletionStatus.EXPIRED,
+                            completedAt = Date()
+                        )
+                        
+                        // Save to history using the repository
+                        historyRepository.addToHistory(rideHistory)
+                        Log.d(TAG, "Saved ride $rideId to history before deletion")
+                    }
+                    
                     // Get all join requests for this ride
                     val joinRequestsQuery = requestsCollection
                         .whereEqualTo("rideId", rideId)
@@ -307,6 +337,11 @@ class FirestoreRideRepositoryImpl : RideRepository {
                 throw e
             }
         }
+    }
+    
+    // Add a default parameter version for backward compatibility
+    override suspend fun deleteRide(rideId: String) {
+        deleteRide(rideId, isManualDeletion = true)
     }
     
     override suspend fun getUserRides(email: String): List<Ride> {

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,6 +47,7 @@ import kotlinx.coroutines.launch
 import com.project.cabshare.ui.theme.CabShareLogoSmall
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.material.icons.filled.History
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,6 +204,15 @@ fun MainScreen(
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Ride History Button
+                RideHistoryCard(
+                    onClick = {
+                        navController.navigate(AppRoutes.RideHistory.route)
+                    }
+                )
                 
                 Spacer(modifier = Modifier.weight(1f))
             }
@@ -499,6 +510,96 @@ fun UserGreetingCard(userInfo: UserInfo?) {
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                     textAlign = TextAlign.Center
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun RideHistoryCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF6B4F89),
+                            Color(0xFF483267)
+                        )
+                    )
+                )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Icon with enhanced styling
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f))
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.5f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = "Ride History",
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                // Content with enhanced text contrast
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "Ride History",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Text(
+                        text = "View your past rides and their details",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+                
+                // Enhanced arrow indicator
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Go",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

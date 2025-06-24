@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,7 +24,8 @@ import androidx.compose.ui.unit.dp
 import com.project.cabshare.R
 
 /**
- * A composable function that displays the CabShare logo in a circular frame
+ * A composable function that displays the CabShare logo in a rounded frame
+ * with consistent spacing and alignment
  */
 @Composable
 fun CabShareLogo(
@@ -40,22 +40,22 @@ fun CabShareLogo(
             .aspectRatio(1f)
             .clip(RoundedCornerShape(16.dp))
             .background(backgroundColor)
-            .border(borderWidth.dp, borderColor, RoundedCornerShape(16.dp)),
+            .border(borderWidth.dp, borderColor, RoundedCornerShape(16.dp))
+            .padding(8.dp), // Added consistent padding
         contentAlignment = Alignment.Center
     ) {
         Image(
             painter = painterResource(id = R.drawable.cabshare_logo),
             contentDescription = contentDescription,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(0.dp),
-            contentScale = ContentScale.Inside
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit // Changed to Fit for better scaling
         )
     }
 }
 
 /**
- * A smaller version of the CabShare logo in a circular frame for app bars
+ * A smaller version of the CabShare logo in a rounded frame for app bars
+ * with consistent spacing and alignment
  */
 @Composable
 fun CabShareLogoSmall(
@@ -68,18 +68,17 @@ fun CabShareLogoSmall(
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp)) // Slightly smaller corner radius for small size
             .background(backgroundColor)
-            .border(borderWidth.dp, borderColor, RoundedCornerShape(16.dp)),
+            .border(borderWidth.dp, borderColor, RoundedCornerShape(12.dp))
+            .padding(4.dp), // Smaller padding for small size
         contentAlignment = Alignment.Center
     ) {
         Image(
             painter = painterResource(id = R.drawable.cabshare_logo),
             contentDescription = contentDescription,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(0.dp),
-            contentScale = ContentScale.Inside
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit // Changed to Fit for better scaling
         )
     }
 }
