@@ -67,7 +67,7 @@ class RideCleanupWorker(
                             trainName = ride.trainName,
                             flightNumber = ride.flightNumber,
                             flightName = ride.flightName,
-                            completionStatus = RideCompletionStatus.EXPIRED,
+                            completionStatus = RideCompletionStatus.COMPLETED,
                             completedAt = now
                         )
                         
