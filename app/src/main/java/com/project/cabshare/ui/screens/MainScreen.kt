@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,6 +47,8 @@ import kotlinx.coroutines.launch
 import com.project.cabshare.ui.theme.CabShareLogoSmall
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.material.icons.filled.History
+import androidx.navigation.compose.rememberNavController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,35 +147,37 @@ fun MainScreen(
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                // My Rides Button - Enhanced
-                Button(
-                    onClick = { navController.navigate(AppRoutes.MyRides.route) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                // My Rides Button
+                DirectionButton(
+                    title = "My Rides",
+                    description = "View and manage your rides",
+                    icon = Icons.Default.Person,
+                    gradient = listOf(
+                        Color(0xFF8E24AA).copy(alpha = 0.9f), // Deep Purple
+                        Color(0xFFBA68C8).copy(alpha = 0.7f)  // Lighter Purple
                     ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 4.dp,
-                        pressedElevation = 8.dp
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "My Rides",
-                        modifier = Modifier.padding(end = 12.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Text(
-                        text = "My Rides",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
+                    onClick = {
+                        navController.navigate(AppRoutes.MyRides.route)
+                    }
+                )
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Ride History Button
+                DirectionButton(
+                    title = "Ride History",
+                    description = "View your past rides",
+                    icon = Icons.Default.History,
+                    gradient = listOf(
+                        Color(0xFF2E7D32).copy(alpha = 0.9f), // Deep Green
+                        Color(0xFF81C784).copy(alpha = 0.7f)  // Lighter Green
+                    ),
+                    onClick = {
+                        navController.navigate(AppRoutes.RideHistory.route)
+                    }
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
                 
                 // Report a Bug Button
                 OutlinedButton(
@@ -199,7 +204,8 @@ fun MainScreen(
                     )
                     Text(
                         text = "Report a Bug",
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 
@@ -504,11 +510,90 @@ fun UserGreetingCard(userInfo: UserInfo?) {
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "Main Screen Home Tab")
+@Preview(showBackground = true, showSystemUi = true, name = "Main Screen Preview")
 @Composable
 fun MainScreenPreview() {
     CabShareTheme {
-        MainScreenContentPreview()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Direction selection with stylized header
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp, top = 8.dp)
+                ) {
+                    Text(
+                        text = "Select Your Direction",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    )
+                }
+                
+                // From IITP Button with home icon
+                DirectionButton(
+                    title = "Going From IITP",
+                    description = "Find or create rides leaving from IIT Patna",
+                    icon = Icons.Default.Home,
+                    gradient = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    ),
+                    onClick = {}
+                )
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // To IITP Button with school icon
+                DirectionButton(
+                    title = "Coming To IITP",
+                    description = "Find or create rides heading to IIT Patna",
+                    icon = Icons.Default.School,
+                    gradient = listOf(
+                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f),
+                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f)
+                    ),
+                    onClick = {}
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // My Rides Button
+                DirectionButton(
+                    title = "My Rides",
+                    description = "View and manage your rides",
+                    icon = Icons.Default.Person,
+                    gradient = listOf(
+                        Color(0xFF8E24AA).copy(alpha = 0.9f), // Deep Purple
+                        Color(0xFFBA68C8).copy(alpha = 0.7f)  // Lighter Purple
+                    ),
+                    onClick = {}
+                )
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Ride History Button
+                DirectionButton(
+                    title = "Ride History",
+                    description = "View your past rides",
+                    icon = Icons.Default.History,
+                    gradient = listOf(
+                        Color(0xFF2E7D32).copy(alpha = 0.9f), // Deep Green
+                        Color(0xFF81C784).copy(alpha = 0.7f)  // Lighter Green
+                    ),
+                    onClick = {}
+                )
+            }
+        }
     }
 }
 

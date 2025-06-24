@@ -26,6 +26,7 @@ interface RideRepository {
     suspend fun createRide(ride: Ride): String
     suspend fun updateRide(ride: Ride)
     suspend fun deleteRide(rideId: String)
+    suspend fun deleteRide(rideId: String, isManualDeletion: Boolean)
     suspend fun getUserRides(email: String): List<Ride>
     suspend fun getRidesByDirection(direction: RideDirection): List<Ride>
     fun observeUserRides(email: String): Flow<List<Ride>>
