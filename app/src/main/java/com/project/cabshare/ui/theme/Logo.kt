@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,9 +38,9 @@ fun CabShareLogo(
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(16.dp))
             .background(backgroundColor)
-            .border(borderWidth.dp, borderColor, CircleShape),
+            .border(borderWidth.dp, borderColor, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
         Image(
@@ -47,7 +48,7 @@ fun CabShareLogo(
             contentDescription = contentDescription,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(4.dp),
+                .padding(0.dp),
             contentScale = ContentScale.Inside
         )
     }
@@ -67,9 +68,9 @@ fun CabShareLogoSmall(
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(16.dp))
             .background(backgroundColor)
-            .border(borderWidth.dp, borderColor, CircleShape),
+            .border(borderWidth.dp, borderColor, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
         Image(
@@ -77,7 +78,7 @@ fun CabShareLogoSmall(
             contentDescription = contentDescription,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(3.dp),
+                .padding(0.dp),
             contentScale = ContentScale.Inside
         )
     }

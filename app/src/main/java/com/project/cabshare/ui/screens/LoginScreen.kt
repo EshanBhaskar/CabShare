@@ -21,6 +21,8 @@ import com.project.cabshare.auth.AuthViewModel
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import com.project.cabshare.ui.theme.CabShareLogo
 import com.project.cabshare.ui.theme.CabShareTheme
