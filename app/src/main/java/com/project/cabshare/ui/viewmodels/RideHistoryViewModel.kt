@@ -22,6 +22,10 @@ class RideHistoryViewModel(
     private val _rideHistory = MutableStateFlow<List<RideHistory>>(emptyList())
     val rideHistory: StateFlow<List<RideHistory>> = _rideHistory
     
+    // Add state for current ride details
+    private val _currentRideHistory = MutableStateFlow<RideHistory?>(null)
+    val currentRideHistory: StateFlow<RideHistory?> = _currentRideHistory
+    
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
     
@@ -53,6 +57,30 @@ class RideHistoryViewModel(
                 Log.e(TAG, "Error in loadUserRideHistory", e)
                 _error.value = "Failed to load ride history: ${e.message}"
                 _rideHistory.value = emptyList()
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    fun loadRideHistoryDetails(rideId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            _currentRideHistory.value = null // Clear previous ride details
+            
+            try {
+                Log.d(TAG, "Loading ride history details for ride: $rideId")
+                val rideDetails = repository.getRideHistory(rideId)
+                if (rideDetails != null) {
+                    _currentRideHistory.value = rideDetails
+                    _error.value = null
+                } else {
+                    _error.value = "Ride not found"
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading ride history details", e)
+                _error.value = "Failed to load ride details: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
