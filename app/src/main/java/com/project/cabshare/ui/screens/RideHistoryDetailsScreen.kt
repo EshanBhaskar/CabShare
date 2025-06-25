@@ -101,7 +101,6 @@ fun RideHistoryDetailsScreen(
                             shape = MaterialTheme.shapes.medium,
                             color = when (ride.completionStatus) {
                                 RideCompletionStatus.COMPLETED -> MaterialTheme.colorScheme.primaryContainer
-                                RideCompletionStatus.EXPIRED -> MaterialTheme.colorScheme.errorContainer
                                 RideCompletionStatus.CANCELLED -> MaterialTheme.colorScheme.surfaceVariant
                             },
                             modifier = Modifier.padding(bottom = 16.dp)
@@ -112,7 +111,7 @@ fun RideHistoryDetailsScreen(
                                 style = MaterialTheme.typography.labelLarge,
                                 color = when (ride.completionStatus) {
                                     RideCompletionStatus.COMPLETED -> MaterialTheme.colorScheme.onPrimaryContainer
-                                    RideCompletionStatus.EXPIRED -> MaterialTheme.colorScheme.onErrorContainer
+//                                    RideCompletionStatus.EXPIRED -> MaterialTheme.colorScheme.onErrorContainer
                                     RideCompletionStatus.CANCELLED -> MaterialTheme.colorScheme.onSurfaceVariant
                                 }
                             )

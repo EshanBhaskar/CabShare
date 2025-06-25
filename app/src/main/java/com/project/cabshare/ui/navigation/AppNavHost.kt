@@ -1,7 +1,8 @@
 package com.project.cabshare.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -31,7 +32,17 @@ fun AppNavHost(
     }
     val authViewModel: AuthViewModel = viewModel(viewModelStoreOwner)
     val rideViewModel: RideViewModel = viewModel(viewModelStoreOwner)
-    val rideHistoryViewModel: RideHistoryViewModel = viewModel(viewModelStoreOwner)
+    
+    // Get current user info from AuthViewModel
+    val userInfo by authViewModel.userInfo.collectAsState(initial = null)
+    
+    // Create RideHistoryViewModel with the user's email
+    val rideHistoryViewModel: RideHistoryViewModel = viewModel(
+        viewModelStoreOwner,
+        factory = RideHistoryViewModel.provideFactory(
+            userEmail = userInfo?.email ?: ""
+        )
+    )
     
     NavHost(
         navController = navController,
@@ -142,8 +153,7 @@ fun AppNavHost(
         composable(AppRoutes.RideHistory.route) {
             RideHistoryScreen(
                 navController = navController,
-                authViewModel = authViewModel,
-                rideHistoryViewModel = rideHistoryViewModel
+                authViewModel = authViewModel
             )
         }
         

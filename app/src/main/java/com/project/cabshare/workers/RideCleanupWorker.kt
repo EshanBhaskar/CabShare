@@ -14,6 +14,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.Date
+import java.util.TimeZone
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class RideCleanupWorker(
     context: Context,
@@ -28,17 +31,23 @@ class RideCleanupWorker(
         Log.d(TAG, "Starting ride cleanup process")
         return withContext(Dispatchers.IO) {
             try {
+                // Get current time in device's timezone
                 val now = Date()
-                Log.d(TAG, "Current time: $now")
+                val deviceTimeZone = TimeZone.getDefault()
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.getDefault())
+                dateFormat.timeZone = deviceTimeZone
                 
-                // Add a small buffer (15 minutes in the past) to avoid race conditions
-                val calendar = Calendar.getInstance()
+                Log.d(TAG, "Current time: ${dateFormat.format(now)}")
+                Log.d(TAG, "Device timezone: ${deviceTimeZone.id} (offset: ${deviceTimeZone.rawOffset / 3600000}h)")
+                
+                // Look for rides that ended 15 minutes ago
+                val calendar = Calendar.getInstance(deviceTimeZone)
                 calendar.time = now
-                calendar.add(Calendar.MINUTE, -15)
-                val bufferTime = calendar.time
+                calendar.add(Calendar.MINUTE, -15) // Subtract 15 minutes
+                val cutoffTime = calendar.time
                 
-                Log.d(TAG, "Fetching rides before: $bufferTime")
-                val oldRides = rideRepository.getRidesBeforeDate(bufferTime)
+                Log.d(TAG, "Cutoff time for old rides: ${dateFormat.format(cutoffTime)}")
+                val oldRides = rideRepository.getRidesBeforeDate(cutoffTime)
                 
                 if (oldRides.isEmpty()) {
                     Log.d(TAG, "No old rides found to delete")
@@ -46,6 +55,19 @@ class RideCleanupWorker(
                 }
                 
                 Log.d(TAG, "Found ${oldRides.size} old rides to delete")
+                
+                // Log details of each ride found
+                oldRides.forEach { ride ->
+                    Log.d(TAG, """
+                        Found old ride to process:
+                        - ID: ${ride.rideId}
+                        - DateTime: ${dateFormat.format(ride.dateTime)}
+                        - Source: ${ride.source}
+                        - Destination: ${ride.destination}
+                        - Creator: ${ride.creatorEmail}
+                    """.trimIndent())
+                }
+                
                 var successCount = 0
                 var failureCount = 0
                 
@@ -67,35 +89,58 @@ class RideCleanupWorker(
                             trainName = ride.trainName,
                             flightNumber = ride.flightNumber,
                             flightName = ride.flightName,
-                            completionStatus = RideCompletionStatus.COMPLETED,
+                            completionStatus = RideCompletionStatus.COMPLETED,  // Always COMPLETED for automatic deletion
                             completedAt = now
                         )
                         
-                        Log.d(TAG, "Saving ride to history: ${ride.rideId}")
-                        historyRepository.addToHistory(rideHistory)
+                        Log.d(TAG, "Saving ride to history: ${ride.rideId} with status: COMPLETED")
+                        Log.d(TAG, "Ride dateTime: ${dateFormat.format(ride.dateTime)}")
                         
-                        // Then delete the original ride
-                        Log.d(TAG, "Deleting ride: ${ride.rideId} with date: ${ride.dateTime}")
-                        rideRepository.deleteRide(ride.rideId, isManualDeletion = false)
-                        Log.d(TAG, "Successfully deleted ride: ${ride.rideId}")
-                        successCount++
+                        // Make sure history is saved before deleting the ride
+                        try {
+                            historyRepository.addToHistory(rideHistory)
+                            Log.d(TAG, "Successfully saved ride to history: ${ride.rideId}")
+                            
+                            // Only delete the ride if history was saved successfully
+                            Log.d(TAG, "Deleting ride: ${ride.rideId}")
+                            rideRepository.deleteRide(ride.rideId, isManualDeletion = false)
+                            Log.d(TAG, "Successfully deleted ride: ${ride.rideId}")
+                            successCount++
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to save ride to history: ${ride.rideId}", e)
+                            Log.e(TAG, "Error details: ${e.message}")
+                            e.printStackTrace()
+                            failureCount++
+                            continue // Skip to next ride if history save fails
+                        }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to process ride ${ride.rideId}: ${e.message}")
+                        Log.e(TAG, "Error details: ${e.message}")
+                        e.printStackTrace()
                         failureCount++
                     }
                 }
                 
-                Log.d(TAG, "Cleanup completed. Success: $successCount, Failures: $failureCount")
+                Log.d(TAG, """
+                    Cleanup completed:
+                    - Success: $successCount
+                    - Failures: $failureCount
+                    - Total rides processed: ${oldRides.size}
+                    - Current time: ${dateFormat.format(Date())}
+                """.trimIndent())
                 
                 if (failureCount > 0 && successCount == 0) {
                     // All operations failed, retry the work
+                    Log.w(TAG, "All operations failed, requesting retry")
                     Result.retry()
                 } else {
                     // Some or all operations succeeded
                     Result.success()
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error during ride cleanup: ${e.message}", e)
+                Log.e(TAG, "Error during ride cleanup: ${e.message}")
+                Log.e(TAG, "Error details: ${e.message}")
+                e.printStackTrace()
                 Result.retry()
             }
         }

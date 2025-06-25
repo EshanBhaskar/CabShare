@@ -1,7 +1,5 @@
 package com.project.cabshare.ui.screens
 
-import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,10 +29,15 @@ import java.util.*
 @Composable
 fun RideHistoryScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = viewModel(),
-    rideHistoryViewModel: RideHistoryViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel()
 ) {
     val userInfo by authViewModel.userInfo.collectAsState()
+    
+    // Create the ViewModel only when we have the user email
+    val rideHistoryViewModel = viewModel<RideHistoryViewModel>(
+        factory = RideHistoryViewModel.provideFactory(userEmail = userInfo?.email ?: "")
+    )
+    
     val rideHistory by rideHistoryViewModel.rideHistory.collectAsState()
     val isLoading by rideHistoryViewModel.isLoading.collectAsState()
     val error by rideHistoryViewModel.error.collectAsState()
@@ -43,8 +46,8 @@ fun RideHistoryScreen(
     
     // Load ride history when user info is available
     LaunchedEffect(userInfo) {
-        userInfo?.email?.let { email ->
-            rideHistoryViewModel.loadUserRideHistory(email)
+        userInfo?.let {
+            rideHistoryViewModel.loadUserRideHistory()
         }
     }
     
@@ -100,8 +103,8 @@ fun RideHistoryScreen(
                         Button(
                             onClick = {
                                 rideHistoryViewModel.clearError()
-                                userInfo?.email?.let { email ->
-                                    rideHistoryViewModel.loadUserRideHistory(email)
+                                userInfo?.let {
+                                    rideHistoryViewModel.loadUserRideHistory()
                                 }
                             },
                             modifier = Modifier.padding(top = 16.dp)
@@ -222,7 +225,6 @@ fun RideHistoryCard(
                     shape = RoundedCornerShape(16.dp),
                     color = when (ride.completionStatus) {
                         RideCompletionStatus.COMPLETED -> MaterialTheme.colorScheme.primaryContainer
-                        RideCompletionStatus.EXPIRED -> MaterialTheme.colorScheme.errorContainer
                         RideCompletionStatus.CANCELLED -> MaterialTheme.colorScheme.surfaceVariant
                     }
                 ) {
@@ -232,7 +234,6 @@ fun RideHistoryCard(
                         style = MaterialTheme.typography.labelMedium,
                         color = when (ride.completionStatus) {
                             RideCompletionStatus.COMPLETED -> MaterialTheme.colorScheme.onPrimaryContainer
-                            RideCompletionStatus.EXPIRED -> MaterialTheme.colorScheme.onErrorContainer
                             RideCompletionStatus.CANCELLED -> MaterialTheme.colorScheme.onSurfaceVariant
                         }
                     )
@@ -294,7 +295,7 @@ fun RideHistoryCard(
             // Additional details if available
             if (ride.trainNumber.isNotEmpty() || ride.flightNumber.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Divider()
+                HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 if (ride.trainNumber.isNotEmpty()) {

@@ -18,11 +18,12 @@ data class RideHistory(
     val flightNumber: String = "",
     val flightName: String = "",
     val completionStatus: RideCompletionStatus = RideCompletionStatus.COMPLETED,
-    val completedAt: Date = Date()
+    val completedAt: Date = Date(),
+    // Add a list to track which users have deleted this ride from their history
+    val deletedByUsers: List<String> = emptyList()
 )
 
 enum class RideCompletionStatus {
-    COMPLETED,  // Ride was completed successfully
-    EXPIRED,    // Ride was not taken (date passed)
+    COMPLETED,  // Ride was completed (either automatically or manually marked)
     CANCELLED   // Ride was cancelled by creator
 } 

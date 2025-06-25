@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.Date
+import com.google.firebase.firestore.FieldValue
 
 class FirestoreRideHistoryRepositoryImpl : RideHistoryRepository {
     private val firestore = FirebaseFirestore.getInstance()
@@ -30,7 +31,7 @@ class FirestoreRideHistoryRepositoryImpl : RideHistoryRepository {
             
             Log.d(TAG, "Found ${snapshot.size()} total rides in history")
             
-            // Filter rides where user is either creator or passenger
+            // Filter rides where user is either creator or passenger AND hasn't deleted the ride
             val rideHistory = snapshot.documents.mapNotNull { doc ->
                 doc.toObject(RideHistory::class.java)?.apply {
                     this.rideId = doc.id
@@ -38,8 +39,9 @@ class FirestoreRideHistoryRepositoryImpl : RideHistoryRepository {
             }.filter { ride ->
                 val isCreator = ride.creatorEmail == userEmail
                 val isPassenger = ride.passengers.any { it.email == userEmail }
-                Log.d(TAG, "Ride ${ride.rideId}: isCreator=$isCreator, isPassenger=$isPassenger")
-                isCreator || isPassenger
+                val hasNotDeleted = !ride.deletedByUsers.contains(userEmail)
+                Log.d(TAG, "Ride ${ride.rideId}: isCreator=$isCreator, isPassenger=$isPassenger, hasNotDeleted=$hasNotDeleted")
+                (isCreator || isPassenger) && hasNotDeleted
             }
             
             Log.d(TAG, "Filtered to ${rideHistory.size} rides for user")
@@ -60,7 +62,11 @@ class FirestoreRideHistoryRepositoryImpl : RideHistoryRepository {
                     historyCollection.document()
                 }
                 
-                val rideWithId = rideHistory.copy(rideId = docRef.id)
+                val rideWithId = rideHistory.copy(
+                    rideId = docRef.id,
+                    // Ensure deletedByUsers is initialized as empty list
+                    deletedByUsers = emptyList()
+                )
                 docRef.set(rideWithId).await()
                 Log.d(TAG, "Successfully added ride to history: ${rideWithId.rideId}")
             } catch (e: Exception) {
@@ -70,13 +76,15 @@ class FirestoreRideHistoryRepositoryImpl : RideHistoryRepository {
         }
     }
     
-    override suspend fun deleteFromHistory(rideId: String) {
+    override suspend fun deleteFromHistory(rideId: String, userEmail: String) {
         withContext(Dispatchers.IO) {
             try {
-                historyCollection.document(rideId).delete().await()
-                Log.d(TAG, "Successfully deleted ride history: $rideId")
+                // Instead of deleting the document, add the user to deletedByUsers array
+                val docRef = historyCollection.document(rideId)
+                docRef.update("deletedByUsers", FieldValue.arrayUnion(userEmail)).await()
+                Log.d(TAG, "Successfully marked ride $rideId as deleted for user $userEmail")
             } catch (e: Exception) {
-                Log.e(TAG, "Error deleting ride history: ${e.message}")
+                Log.e(TAG, "Error marking ride as deleted: ${e.message}")
                 throw e
             }
         }
