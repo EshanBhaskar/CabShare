@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.project.cabshare.auth.AuthViewModel
 import com.project.cabshare.models.RideHistory
 import com.project.cabshare.models.RideCompletionStatus
@@ -24,13 +25,15 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RideHistoryDetailsScreen(
-    navController: NavController,
+    navController: NavHostController,
     rideId: String,
     authViewModel: AuthViewModel = viewModel(),
-    rideHistoryViewModel: RideHistoryViewModel = viewModel()
+    rideHistoryViewModel: RideHistoryViewModel = viewModel(),
+    onBackClick: () -> Unit,
+    onChatClick: (RideHistory) -> Unit
 ) {
     val userInfo by authViewModel.userInfo.collectAsState()
-    val currentRide by rideHistoryViewModel.currentRideHistory.collectAsState()
+    val currentRideHistory by rideHistoryViewModel.currentRideHistory.collectAsState()
     val isLoading by rideHistoryViewModel.isLoading.collectAsState()
     val error by rideHistoryViewModel.error.collectAsState()
     
@@ -44,10 +47,15 @@ fun RideHistoryDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ride Details") },
+                title = { Text("Ride History Details") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { currentRideHistory?.let(onChatClick) }) {
+                        Icon(Icons.Default.Chat, contentDescription = "Chat")
                     }
                 }
             )
@@ -79,7 +87,7 @@ fun RideHistoryDetailsScreen(
                         )
                     }
                 }
-                currentRide == null -> {
+                currentRideHistory == null -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -95,7 +103,7 @@ fun RideHistoryDetailsScreen(
                 }
                 else -> {
                     // Extract currentRide to a local variable that can be smart cast
-                    val ride = currentRide
+                    val ride = currentRideHistory
                     if (ride != null) {
                         Column(
                             modifier = Modifier

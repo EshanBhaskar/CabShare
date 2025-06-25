@@ -36,4 +36,10 @@ object AppRoutes {
         const val rideIdArg = "rideId"
         fun createRoute(rideId: String) = "$route/$rideId"
     }
+
+    object Chat {
+        const val route = "chat/{rideId}"
+        const val rideIdArg = "rideId"
+        fun createRoute(rideId: String) = "chat/$rideId"
+    }
 } 
