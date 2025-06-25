@@ -51,14 +51,33 @@ class FirestoreRideRepositoryImpl : RideRepository {
     
     override suspend fun getRidesBeforeDate(date: Date): List<Ride> {
         return try {
+            Log.d(TAG, "Fetching rides before date: $date")
             val snapshot = ridesCollection
                 .whereLessThan("dateTime", date)
                 .get()
                 .await()
             
+            Log.d(TAG, "Found ${snapshot.size()} rides before date")
+            
             snapshot.documents.mapNotNull { doc ->
+                // Log raw document data for debugging
+                val rawData = doc.data
+                Log.d(TAG, """
+                    Raw ride data for ${doc.id}:
+                    - Creator: ${rawData?.get("creatorEmail")}
+                    - Passengers: ${rawData?.get("passengers")}
+                    - Raw passengers data: ${rawData?.get("passengers")?.javaClass}
+                """.trimIndent())
+                
                 doc.toObject(Ride::class.java)?.apply { 
-                    this.rideId = doc.id 
+                    this.rideId = doc.id
+                    // Log converted object data
+                    Log.d(TAG, """
+                        Converted ride data for $rideId:
+                        - Creator: $creatorEmail
+                        - Passengers count: ${passengers.size}
+                        - Passenger details: ${passengers.map { "${it.email} (${it.displayName})" }}
+                    """.trimIndent())
                 }
             }
         } catch (e: Exception) {
@@ -262,7 +281,7 @@ class FirestoreRideRepositoryImpl : RideRepository {
                             trainName = ride.trainName,
                             flightNumber = ride.flightNumber,
                             flightName = ride.flightName,
-                            completionStatus = if (isManualDeletion) RideCompletionStatus.CANCELLED else RideCompletionStatus.EXPIRED,
+                            completionStatus = if (isManualDeletion) RideCompletionStatus.CANCELLED else RideCompletionStatus.COMPLETED,
                             completedAt = Date()
                         )
                         

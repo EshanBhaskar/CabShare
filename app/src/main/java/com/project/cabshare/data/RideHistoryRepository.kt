@@ -18,7 +18,7 @@ interface RideHistoryRepository {
     /**
      * Delete a ride history entry
      */
-    suspend fun deleteFromHistory(rideId: String)
+    suspend fun deleteFromHistory(rideId: String, userEmail: String)
     
     /**
      * Get a specific ride history entry

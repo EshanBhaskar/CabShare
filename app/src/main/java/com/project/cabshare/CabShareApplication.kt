@@ -64,9 +64,10 @@ class CabShareApplication : Application(), Configuration.Provider {
     }
     
     private fun scheduleRideCleanup() {
-        // Create a clean-up request that runs every 1 hour
+        // Create a clean-up request that runs every 15 minutes
         val cleanupRequest = PeriodicWorkRequestBuilder<RideCleanupWorker>(
-            1, TimeUnit.HOURS
+            15, TimeUnit.MINUTES,  // Run every 15 minutes
+            5, TimeUnit.MINUTES    // With flex interval of 5 minutes
         )
         .setConstraints(
             Constraints.Builder()
