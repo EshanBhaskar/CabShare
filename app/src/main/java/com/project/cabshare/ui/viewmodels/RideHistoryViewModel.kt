@@ -73,9 +73,11 @@ class RideHistoryViewModel(
                 Log.d(TAG, "Loading ride history details for ride: $rideId")
                 val rideDetails = repository.getRideHistory(rideId)
                 if (rideDetails != null) {
+                    Log.d(TAG, "Successfully loaded ride history details: $rideDetails")
                     _currentRideHistory.value = rideDetails
                     _error.value = null
                 } else {
+                    Log.e(TAG, "Ride history not found for ID: $rideId")
                     _error.value = "Ride not found"
                 }
             } catch (e: Exception) {

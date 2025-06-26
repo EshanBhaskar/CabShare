@@ -20,6 +20,7 @@ import android.util.Log
 import com.project.cabshare.ui.screens.ChatScreen
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavController
+import com.project.cabshare.models.Ride
 
 /**
  * Main navigation component for the app
@@ -181,16 +182,46 @@ fun AppNavHost(
         ) { backStackEntry ->
             val rideId = backStackEntry.arguments?.getString(AppRoutes.Chat.rideIdArg) ?: return@composable
             val userInfo by authViewModel.userInfo.collectAsState()
+            
+            // Create both view models
             val rideViewModel: RideViewModel = viewModel()
+            val rideHistoryViewModel: RideHistoryViewModel = viewModel(
+                factory = RideHistoryViewModel.provideFactory(userEmail = userInfo?.email ?: "")
+            )
+            
+            // Observe both active ride and ride history
             val currentRide by rideViewModel.currentRide.collectAsState()
+            val currentRideHistory by rideHistoryViewModel.currentRideHistory.collectAsState()
             
             LaunchedEffect(rideId) {
                 rideViewModel.observeRideDetails(rideId)
+                rideHistoryViewModel.loadRideHistoryDetails(rideId)
             }
             
-            currentRide?.let { ride ->
+            // Convert RideHistory to Ride if needed
+            val ride = currentRide ?: currentRideHistory?.let { history ->
+                Ride(
+                    rideId = history.rideId,
+                    source = history.source,
+                    destination = history.destination,
+                    dateTime = history.dateTime,
+                    maxPassengers = history.maxPassengers,
+                    creator = history.creator,
+                    creatorEmail = history.creatorEmail,
+                    direction = history.direction,
+                    notes = history.notes,
+                    passengers = history.passengers,
+                    trainNumber = history.trainNumber,
+                    trainName = history.trainName,
+                    flightNumber = history.flightNumber,
+                    flightName = history.flightName,
+                    status = "COMPLETED"
+                )
+            }
+            
+            ride?.let { r ->
                 ChatScreen(
-                    ride = ride,
+                    ride = r,
                     userEmail = userInfo?.email ?: "",
                     userName = userInfo?.displayName ?: "",
                     onBackClick = { navController.popBackStack() }

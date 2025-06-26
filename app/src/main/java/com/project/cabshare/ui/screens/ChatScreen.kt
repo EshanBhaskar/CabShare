@@ -1,5 +1,6 @@
 package com.project.cabshare.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,6 +33,11 @@ fun ChatScreen(
     userName: String,
     onBackClick: () -> Unit
 ) {
+    // Add debug logging for ride data
+    LaunchedEffect(ride) {
+        Log.d("ChatScreen", "Received ride data: $ride")
+    }
+
     val viewModel: ChatViewModel = viewModel(
         factory = ChatViewModel.Factory(userEmail, userName)
     )
@@ -43,6 +49,7 @@ fun ChatScreen(
     
     // Load initial messages
     LaunchedEffect(ride.rideId) {
+        Log.d("ChatScreen", "Loading messages for ride: ${ride.rideId}")
         viewModel.loadInitialMessages(ride.rideId)
         viewModel.startObservingMessages(ride.rideId)
     }
@@ -50,6 +57,7 @@ fun ChatScreen(
     // Handle errors
     LaunchedEffect(error) {
         error?.let {
+            Log.e("ChatScreen", "Error in chat: $it")
             // Show error message (you can implement your own error handling)
             viewModel.clearError()
         }
@@ -58,6 +66,7 @@ fun ChatScreen(
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages) {
         if (messages.isNotEmpty()) {
+            Log.d("ChatScreen", "Received ${messages.size} messages")
             listState.animateScrollToItem(messages.size - 1)
         }
     }

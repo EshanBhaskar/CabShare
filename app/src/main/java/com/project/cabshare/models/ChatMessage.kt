@@ -8,5 +8,6 @@ data class ChatMessage(
     val senderEmail: String = "",
     val senderName: String = "",
     val message: String = "",
-    val timestamp: Date = Date()
+    val timestamp: Date = Date(),
+    val deletedByUsers: List<String> = emptyList()
 ) 

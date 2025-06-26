@@ -37,12 +37,14 @@ class ChatViewModel(
         currentRideId = rideId
         viewModelScope.launch {
             try {
-                repository.observeMessages(rideId)
+                Log.d(TAG, "Starting to observe messages for ride: $rideId")
+                repository.observeMessages(rideId, userEmail)
                     .catch { e ->
                         Log.e(TAG, "Error observing messages", e)
                         _error.value = "Error loading messages: ${e.message}"
                     }
                     .collect { messages ->
+                        Log.d(TAG, "Received ${messages.size} messages in real-time")
                         _messages.value = messages
                     }
             } catch (e: Exception) {
@@ -57,7 +59,9 @@ class ChatViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val messages = repository.getMessages(rideId, PAGE_SIZE, null)
+                Log.d(TAG, "Loading initial messages for ride: $rideId")
+                val messages = repository.getMessages(rideId, PAGE_SIZE, null, userEmail)
+                Log.d(TAG, "Loaded ${messages.size} initial messages")
                 _messages.value = messages
                 lastMessageTimestamp = messages.lastOrNull()?.timestamp?.time
             } catch (e: Exception) {
@@ -75,7 +79,7 @@ class ChatViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val olderMessages = repository.getMessages(rideId, PAGE_SIZE, lastMessageTimestamp)
+                val olderMessages = repository.getMessages(rideId, PAGE_SIZE, lastMessageTimestamp, userEmail)
                 if (olderMessages.isNotEmpty()) {
                     _messages.value = _messages.value + olderMessages
                     lastMessageTimestamp = olderMessages.lastOrNull()?.timestamp?.time
@@ -106,6 +110,17 @@ class ChatViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "Error sending message", e)
                 _error.value = "Failed to send message: ${e.message}"
+            }
+        }
+    }
+    
+    fun deleteMessage(messageId: String) {
+        viewModelScope.launch {
+            try {
+                repository.markMessageAsDeleted(messageId, userEmail)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting message", e)
+                _error.value = "Failed to delete message: ${e.message}"
             }
         }
     }
