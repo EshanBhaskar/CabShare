@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,7 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.project.cabshare.auth.AuthViewModel
 import com.project.cabshare.data.JoinRequest
 import com.project.cabshare.data.RequestStatus
@@ -53,10 +54,12 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RideDetailsScreen(
-    navController: NavController,
+    navController: NavHostController,
     rideId: String,
     authViewModel: AuthViewModel = viewModel(),
-    rideViewModel: RideViewModel = viewModel()
+    rideViewModel: RideViewModel = viewModel(),
+    onBackClick: () -> Unit,
+    onChatClick: (Ride) -> Unit
 ) {
     val currentRide by rideViewModel.currentRide.collectAsState()
     val isLoading by rideViewModel.isLoading.collectAsState()
@@ -207,8 +210,13 @@ fun RideDetailsScreen(
             TopAppBar(
                 title = { Text("Ride Details") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { currentRide?.let(onChatClick) }) {
+                        Icon(Icons.Default.Chat, contentDescription = "Chat")
                     }
                 }
             )

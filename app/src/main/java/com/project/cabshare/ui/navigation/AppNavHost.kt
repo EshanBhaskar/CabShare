@@ -17,14 +17,18 @@ import com.project.cabshare.ui.screens.*
 import com.project.cabshare.ui.viewmodels.RideViewModel
 import com.project.cabshare.ui.viewmodels.RideHistoryViewModel
 import android.util.Log
+import com.project.cabshare.ui.screens.ChatScreen
+import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.NavController
+import com.project.cabshare.models.Ride
 
 /**
  * Main navigation component for the app
  */
 @Composable
 fun AppNavHost(
-    navController: NavHostController = rememberNavController(),
-    startDestination: String = AppRoutes.SPLASH
+    navController: NavHostController,
+    authViewModel: AuthViewModel = viewModel()
 ) {
     // Ensure the AuthViewModel is created at the top level
     val viewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current) {
@@ -46,7 +50,7 @@ fun AppNavHost(
     
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = AppRoutes.SPLASH
     ) {
         // Splash screen
         composable(AppRoutes.SPLASH) {
@@ -123,20 +127,18 @@ fun AppNavHost(
         
         // Ride Details Screen - Includes ride ID as an argument
         composable(
-            route = "${AppRoutes.RideDetails.route}/{${AppRoutes.RideDetails.rideIdArg}}",
-            arguments = listOf(
-                navArgument(AppRoutes.RideDetails.rideIdArg) {
-                    type = NavType.StringType
-                }
-            )
+            route = AppRoutes.RideDetails.route + "/{${AppRoutes.RideDetails.rideIdArg}}",
+            arguments = listOf(navArgument(AppRoutes.RideDetails.rideIdArg) { type = NavType.StringType })
         ) { backStackEntry ->
-            val rideId = backStackEntry.arguments?.getString(AppRoutes.RideDetails.rideIdArg) ?: ""
-            
+            val rideId = backStackEntry.arguments?.getString(AppRoutes.RideDetails.rideIdArg) ?: return@composable
             RideDetailsScreen(
                 navController = navController,
                 rideId = rideId,
                 authViewModel = authViewModel,
-                rideViewModel = rideViewModel
+                onBackClick = { navController.popBackStack() },
+                onChatClick = { ride ->
+                    navController.navigate(AppRoutes.Chat.createRoute(ride.rideId))
+                }
             )
         }
         
@@ -159,20 +161,72 @@ fun AppNavHost(
         
         // Ride History Details Screen
         composable(
-            route = "${AppRoutes.RideHistoryDetails.route}/{${AppRoutes.RideHistoryDetails.rideIdArg}}",
-            arguments = listOf(
-                navArgument(AppRoutes.RideHistoryDetails.rideIdArg) {
-                    type = NavType.StringType
-                }
-            )
+            route = AppRoutes.RideHistoryDetails.route + "/{${AppRoutes.RideHistoryDetails.rideIdArg}}",
+            arguments = listOf(navArgument(AppRoutes.RideHistoryDetails.rideIdArg) { type = NavType.StringType })
         ) { backStackEntry ->
-            val rideId = backStackEntry.arguments?.getString(AppRoutes.RideHistoryDetails.rideIdArg) ?: ""
+            val rideId = backStackEntry.arguments?.getString(AppRoutes.RideHistoryDetails.rideIdArg) ?: return@composable
             RideHistoryDetailsScreen(
                 navController = navController,
                 rideId = rideId,
                 authViewModel = authViewModel,
-                rideHistoryViewModel = rideHistoryViewModel
+                onBackClick = { navController.popBackStack() },
+                onChatClick = { rideHistory ->
+                    navController.navigate(AppRoutes.Chat.createRoute(rideHistory.rideId))
+                }
             )
+        }
+        
+        composable(
+            route = AppRoutes.Chat.route,
+            arguments = listOf(navArgument(AppRoutes.Chat.rideIdArg) { type = NavType.StringType })
+        ) { backStackEntry ->
+            val rideId = backStackEntry.arguments?.getString(AppRoutes.Chat.rideIdArg) ?: return@composable
+            val userInfo by authViewModel.userInfo.collectAsState()
+            
+            // Create both view models
+            val rideViewModel: RideViewModel = viewModel()
+            val rideHistoryViewModel: RideHistoryViewModel = viewModel(
+                factory = RideHistoryViewModel.provideFactory(userEmail = userInfo?.email ?: "")
+            )
+            
+            // Observe both active ride and ride history
+            val currentRide by rideViewModel.currentRide.collectAsState()
+            val currentRideHistory by rideHistoryViewModel.currentRideHistory.collectAsState()
+            
+            LaunchedEffect(rideId) {
+                rideViewModel.observeRideDetails(rideId)
+                rideHistoryViewModel.loadRideHistoryDetails(rideId)
+            }
+            
+            // Convert RideHistory to Ride if needed
+            val ride = currentRide ?: currentRideHistory?.let { history ->
+                Ride(
+                    rideId = history.rideId,
+                    source = history.source,
+                    destination = history.destination,
+                    dateTime = history.dateTime,
+                    maxPassengers = history.maxPassengers,
+                    creator = history.creator,
+                    creatorEmail = history.creatorEmail,
+                    direction = history.direction,
+                    notes = history.notes,
+                    passengers = history.passengers,
+                    trainNumber = history.trainNumber,
+                    trainName = history.trainName,
+                    flightNumber = history.flightNumber,
+                    flightName = history.flightName,
+                    status = "COMPLETED"
+                )
+            }
+            
+            ride?.let { r ->
+                ChatScreen(
+                    ride = r,
+                    userEmail = userInfo?.email ?: "",
+                    userName = userInfo?.displayName ?: "",
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
         }
     }
 } 

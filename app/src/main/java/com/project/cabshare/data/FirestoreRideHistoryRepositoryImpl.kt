@@ -93,16 +93,20 @@ class FirestoreRideHistoryRepositoryImpl : RideHistoryRepository {
     override suspend fun getRideHistory(rideId: String): RideHistory? {
         return withContext(Dispatchers.IO) {
             try {
+                Log.d(TAG, "Fetching ride history for ID: $rideId")
                 val document = historyCollection.document(rideId).get().await()
                 if (document.exists()) {
+                    Log.d(TAG, "Found ride history document: ${document.data}")
                     document.toObject(RideHistory::class.java)?.apply {
                         this.rideId = document.id
+                        Log.d(TAG, "Successfully converted to RideHistory object: $this")
                     }
                 } else {
+                    Log.e(TAG, "No ride history document found for ID: $rideId")
                     null
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error getting ride history: ${e.message}")
+                Log.e(TAG, "Error getting ride history: ${e.message}", e)
                 null
             }
         }

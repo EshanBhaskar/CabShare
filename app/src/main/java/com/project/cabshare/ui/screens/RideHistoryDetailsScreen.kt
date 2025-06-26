@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,30 +14,58 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.project.cabshare.auth.AuthViewModel
 import com.project.cabshare.models.RideHistory
 import com.project.cabshare.models.RideCompletionStatus
+import com.project.cabshare.models.RideDirection
 import com.project.cabshare.ui.viewmodels.RideHistoryViewModel
+import com.project.cabshare.data.FirestoreUserRepository
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RideHistoryDetailsScreen(
-    navController: NavController,
+    navController: NavHostController,
     rideId: String,
     authViewModel: AuthViewModel = viewModel(),
-    rideHistoryViewModel: RideHistoryViewModel = viewModel()
+    onBackClick: () -> Unit,
+    onChatClick: (RideHistory) -> Unit
 ) {
     val userInfo by authViewModel.userInfo.collectAsState()
-    val currentRide by rideHistoryViewModel.currentRideHistory.collectAsState()
+    
+    // Create RideHistoryViewModel with the user's email
+    val rideHistoryViewModel: RideHistoryViewModel = viewModel(
+        factory = RideHistoryViewModel.provideFactory(userEmail = userInfo?.email ?: "")
+    )
+    
+    val currentRideHistory by rideHistoryViewModel.currentRideHistory.collectAsState()
     val isLoading by rideHistoryViewModel.isLoading.collectAsState()
     val error by rideHistoryViewModel.error.collectAsState()
+    
+    // Create Firestore repository instance for fetching user profiles
+    val userRepository = remember { FirestoreUserRepository() }
+    
+    // State for creator's display name
+    var creatorDisplayName by remember { mutableStateOf<String?>(null) }
     
     // Load ride details when screen is created
     LaunchedEffect(rideId) {
         rideHistoryViewModel.loadRideHistoryDetails(rideId)
+    }
+    
+    // Fetch creator's display name when ride details are loaded
+    LaunchedEffect(currentRideHistory) {
+        currentRideHistory?.let { ride ->
+            try {
+                val creatorProfile = userRepository.getUserProfile(ride.creatorEmail)
+                creatorDisplayName = creatorProfile?.displayName
+            } catch (e: Exception) {
+                // If we can't fetch the creator's name, we'll fall back to showing just the email
+                creatorDisplayName = null
+            }
+        }
     }
     
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault()) }
@@ -44,10 +73,15 @@ fun RideHistoryDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ride Details") },
+                title = { Text("Ride History Details") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { currentRideHistory?.let(onChatClick) }) {
+                        Icon(Icons.Default.Chat, contentDescription = "Chat")
                     }
                 }
             )
@@ -79,7 +113,7 @@ fun RideHistoryDetailsScreen(
                         )
                     }
                 }
-                currentRide == null -> {
+                currentRideHistory == null -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -95,7 +129,7 @@ fun RideHistoryDetailsScreen(
                 }
                 else -> {
                     // Extract currentRide to a local variable that can be smart cast
-                    val ride = currentRide
+                    val ride = currentRideHistory
                     if (ride != null) {
                         Column(
                             modifier = Modifier
@@ -130,21 +164,24 @@ fun RideHistoryDetailsScreen(
                                                 RideCompletionStatus.COMPLETED -> Icons.Default.CheckCircle
                                                 RideCompletionStatus.CANCELLED -> Icons.Default.Cancel
                                             },
-                                            contentDescription = "Status"
+                                            contentDescription = "Status Icon",
+                                            tint = when (ride.completionStatus) {
+                                                RideCompletionStatus.COMPLETED -> MaterialTheme.colorScheme.primary
+                                                RideCompletionStatus.CANCELLED -> MaterialTheme.colorScheme.error
+                                            }
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = when (ride.completionStatus) {
                                                 RideCompletionStatus.COMPLETED -> "Completed"
                                                 RideCompletionStatus.CANCELLED -> "Cancelled"
-                                            },
-                                            style = MaterialTheme.typography.bodyLarge
+                                            }
                                         )
                                     }
                                 }
                             }
                             
-                            // Route information
+                            // Ride details
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -156,92 +193,72 @@ fun RideHistoryDetailsScreen(
                                         .padding(16.dp)
                                 ) {
                                     Text(
-                                        text = "Route Details",
+                                        text = "Ride Details",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(bottom = 8.dp)
                                     )
                                     
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.LocationOn,
-                                            contentDescription = "Source"
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = ride.source,
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                    }
-                                    
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDownward,
-                                        contentDescription = "to",
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                                    )
-                                    
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Place,
-                                            contentDescription = "Destination"
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = ride.destination,
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                    }
-                                }
-                            }
-                            
-                            // Time information
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
-                                ) {
+                                    // Source and Destination
                                     Text(
-                                        text = "Time Details",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(bottom = 8.dp)
+                                        text = "From: ${ride.source}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
+                                    Text(
+                                        text = "To: ${ride.destination}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                     
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Schedule,
-                                            contentDescription = "Scheduled time"
+                                    // Date and Time
+                                    Text(
+                                        text = "Date & Time: ${dateFormat.format(ride.dateTime)}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
+                                    
+                                    // Direction
+                                    Text(
+                                        text = "Direction: ${
+                                            when (ride.direction) {
+                                                RideDirection.FROM_IITP -> "From IITP"
+                                                RideDirection.TO_IITP -> "To IITP"
+                                            }
+                                        }",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
+                                    
+                                    // Train/Flight details if available
+                                    if (ride.trainNumber.isNotEmpty() || ride.trainName.isNotEmpty()) {
+                                        Text(
+                                            text = "Train: ${ride.trainNumber} ${ride.trainName}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(vertical = 4.dp)
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
-                                            Text(
-                                                text = "Scheduled for",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Text(
-                                                text = dateFormat.format(ride.dateTime),
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-                                        }
+                                    }
+                                    
+                                    if (ride.flightNumber.isNotEmpty() || ride.flightName.isNotEmpty()) {
+                                        Text(
+                                            text = "Flight: ${ride.flightNumber} ${ride.flightName}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        )
+                                    }
+                                    
+                                    // Notes if available
+                                    if (ride.notes.isNotEmpty()) {
+                                        Text(
+                                            text = "Notes: ${ride.notes}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        )
                                     }
                                 }
                             }
                             
-                            // Participants information
+                            // Participants
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -259,158 +276,38 @@ fun RideHistoryDetailsScreen(
                                         modifier = Modifier.padding(bottom = 8.dp)
                                     )
                                     
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Person,
-                                            contentDescription = "Creator"
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
-                                            Text(
-                                                text = "Created by",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Text(
-                                                text = ride.creator,
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-                                        }
-                                    }
+                                    // Creator
+                                    Text(
+                                        text = if (creatorDisplayName != null) {
+                                            "Creator: $creatorDisplayName (${ride.creatorEmail})"
+                                        } else {
+                                            "Creator: ${ride.creatorEmail}"
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
                                     
                                     // Passengers
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "Passengers",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
-                                    // Add creator first in the passengers list
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 32.dp, bottom = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
+                                    if (ride.passengers.isNotEmpty()) {
                                         Text(
-                                            // Take only the part before underscore and capitalize it
-                                            text = ride.creatorEmail.substringBefore("_").capitalize(),
-                                            style = MaterialTheme.typography.bodyLarge
+                                            text = "Passengers:",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                                         )
-                                    }
-                                    // Then show other passengers
-                                    ride.passengers.forEach { passenger ->
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(start = 32.dp, bottom = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
+                                        ride.passengers.forEach { passenger ->
                                             Text(
-                                                text = passenger.displayName,
-                                                style = MaterialTheme.typography.bodyLarge
+                                                text = "${passenger.displayName} (${passenger.email})",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.padding(vertical = 2.dp)
                                             )
                                         }
-                                    }
-                                }
-                            }
-                            
-                            // Additional details (if any)
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
-                                ) {
-                                    Text(
-                                        text = "Additional Details",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(bottom = 8.dp)
-                                    )
-                                    
-                                    // Train details
-                                    if (!ride.trainNumber.isBlank() || !ride.trainName.isBlank()) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(bottom = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Train,
-                                                contentDescription = "Train"
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
-                                                if (ride.trainNumber.isNotBlank()) {
-                                                    Text(
-                                                        text = "Train Number: ${ride.trainNumber}",
-                                                        style = MaterialTheme.typography.bodyLarge
-                                                    )
-                                                }
-                                                if (ride.trainName.isNotBlank()) {
-                                                    Text(
-                                                        text = ride.trainName,
-                                                        style = MaterialTheme.typography.bodyMedium
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                    
-                                    // Flight details
-                                    if (!ride.flightNumber.isBlank() || !ride.flightName.isBlank()) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(bottom = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Flight,
-                                                contentDescription = "Flight"
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
-                                                if (ride.flightNumber.isNotBlank()) {
-                                                    Text(
-                                                        text = "Flight Number: ${ride.flightNumber}",
-                                                        style = MaterialTheme.typography.bodyLarge
-                                                    )
-                                                }
-                                                if (ride.flightName.isNotBlank()) {
-                                                    Text(
-                                                        text = ride.flightName,
-                                                        style = MaterialTheme.typography.bodyMedium
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                    
-                                    // Notes
-                                    if (!ride.notes.isBlank()) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.Top
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Notes,
-                                                contentDescription = "Notes"
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = ride.notes,
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-                                        }
+                                    } else {
+                                        Text(
+                                            text = "No passengers joined this ride",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        )
                                     }
                                 }
                             }
