@@ -38,17 +38,17 @@ fun CabShareLogo(
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(percent = 50)) // Make container fully circular
             .background(backgroundColor)
-            .border(borderWidth.dp, borderColor, RoundedCornerShape(16.dp))
-            .padding(8.dp), // Added consistent padding
+//            .border(borderWidth.dp, borderColor, RoundedCornerShape(percent = 50))
+            .padding(0.dp), // Increased padding to ensure logo is fully visible
         contentAlignment = Alignment.Center
     ) {
         Image(
             painter = painterResource(id = R.drawable.cabshare_logo),
             contentDescription = contentDescription,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit // Changed to Fit for better scaling
+            contentScale = ContentScale.Inside // Changed to Inside to ensure full logo is visible
         )
     }
 }
@@ -68,17 +68,17 @@ fun CabShareLogoSmall(
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(12.dp)) // Slightly smaller corner radius for small size
+            .clip(RoundedCornerShape(percent = 50)) // Make container fully circular
             .background(backgroundColor)
-            .border(borderWidth.dp, borderColor, RoundedCornerShape(12.dp))
-            .padding(4.dp), // Smaller padding for small size
+//            .border(borderWidth.dp, borderColor, RoundedCornerShape(percent = 50))
+            .padding(0.dp), // Adjusted padding for small size
         contentAlignment = Alignment.Center
     ) {
         Image(
             painter = painterResource(id = R.drawable.cabshare_logo),
             contentDescription = contentDescription,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit // Changed to Fit for better scaling
+            contentScale = ContentScale.Inside // Changed to Inside to ensure full logo is visible
         )
     }
 }
