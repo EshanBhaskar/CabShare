@@ -20,6 +20,7 @@ import com.project.cabshare.models.RideHistory
 import com.project.cabshare.models.RideCompletionStatus
 import com.project.cabshare.models.RideDirection
 import com.project.cabshare.ui.viewmodels.RideHistoryViewModel
+import com.project.cabshare.data.FirestoreUserRepository
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -43,9 +44,28 @@ fun RideHistoryDetailsScreen(
     val isLoading by rideHistoryViewModel.isLoading.collectAsState()
     val error by rideHistoryViewModel.error.collectAsState()
     
+    // Create Firestore repository instance for fetching user profiles
+    val userRepository = remember { FirestoreUserRepository() }
+    
+    // State for creator's display name
+    var creatorDisplayName by remember { mutableStateOf<String?>(null) }
+    
     // Load ride details when screen is created
     LaunchedEffect(rideId) {
         rideHistoryViewModel.loadRideHistoryDetails(rideId)
+    }
+    
+    // Fetch creator's display name when ride details are loaded
+    LaunchedEffect(currentRideHistory) {
+        currentRideHistory?.let { ride ->
+            try {
+                val creatorProfile = userRepository.getUserProfile(ride.creatorEmail)
+                creatorDisplayName = creatorProfile?.displayName
+            } catch (e: Exception) {
+                // If we can't fetch the creator's name, we'll fall back to showing just the email
+                creatorDisplayName = null
+            }
+        }
     }
     
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault()) }
@@ -158,12 +178,6 @@ fun RideHistoryDetailsScreen(
                                             }
                                         )
                                     }
-                                    
-                                    Text(
-                                        text = "Completed at: ${dateFormat.format(ride.completedAt)}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(top = 8.dp)
-                                    )
                                 }
                             }
                             
@@ -264,7 +278,11 @@ fun RideHistoryDetailsScreen(
                                     
                                     // Creator
                                     Text(
-                                        text = "Creator: ${ride.creator} (${ride.creatorEmail})",
+                                        text = if (creatorDisplayName != null) {
+                                            "Creator: $creatorDisplayName (${ride.creatorEmail})"
+                                        } else {
+                                            "Creator: ${ride.creatorEmail}"
+                                        },
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier.padding(vertical = 4.dp)
                                     )
