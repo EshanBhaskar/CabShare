@@ -52,15 +52,24 @@ fun SplashScreen(
     // Collect auth state
     val authState by authViewModel.authState.collectAsState()
 
+    // Collect profile completion state
+    val isProfileCompleted by authViewModel.isProfileCompleted.collectAsState()
+
     LaunchedEffect(key1 = true) {
         startAnimation = true
         delay(2000) // Show splash screen for 2 seconds
         
-        // Navigate based on authentication state
+        // Navigate based on authentication state and profile completion
         when (authState) {
             is AuthState.Authenticated -> {
-                navController.navigate(AppRoutes.MAIN) {
-                    popUpTo(AppRoutes.SPLASH) { inclusive = true }
+                if (isProfileCompleted) {
+                    navController.navigate(AppRoutes.MAIN) {
+                        popUpTo(AppRoutes.SPLASH) { inclusive = true }
+                    }
+                } else {
+                    navController.navigate(AppRoutes.USER_PROFILE) {
+                        popUpTo(AppRoutes.SPLASH) { inclusive = true }
+                    }
                 }
             }
             else -> {

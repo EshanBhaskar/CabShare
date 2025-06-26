@@ -107,7 +107,6 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                     val updatedProfile = existingProfile.copy(
                         // Update only what's in the updates map
                         displayName = updates["displayName"] as? String ?: existingProfile.displayName,
-                        phoneNumber = updates["phoneNumber"] as? String ?: existingProfile.phoneNumber,
                         rollNumber = updates["rollNumber"] as? String ?: existingProfile.rollNumber
                     )
                     userRepository.saveUserProfile(updatedProfile)

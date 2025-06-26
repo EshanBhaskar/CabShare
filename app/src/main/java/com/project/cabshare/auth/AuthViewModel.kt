@@ -130,16 +130,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             // Check if profile exists in Firestore
             val profile = firestoreRepository.getUserProfile(email)
             if (profile != null) {
-                // Consider profile complete if we have name, roll, and phone number
+                // Consider profile complete if we have name and roll number
                 val isComplete = profile.displayName.isNotBlank() && 
-                                profile.rollNumber.isNotBlank() && 
-                                profile.phoneNumber.length == 10
+                                profile.rollNumber.isNotBlank()
                 
                 _isProfileCompleted.value = isComplete
-                // Log.d(TAG, "Firestore profile completion check: $isComplete")
             } else {
                 _isProfileCompleted.value = false
-                // Log.d(TAG, "No Firestore profile found")
             }
         } catch (e: Exception) {
             _isProfileCompleted.value = false

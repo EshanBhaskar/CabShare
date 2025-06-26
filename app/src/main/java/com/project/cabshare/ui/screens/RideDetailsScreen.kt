@@ -17,12 +17,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.DirectionsCarFilled
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.automirrored.filled.Notes
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,6 +65,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.foundation.BorderStroke
 import kotlinx.coroutines.launch
+import com.project.cabshare.auth.UserInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,65 +87,15 @@ fun RideDetailsScreen(
     val creatorProfile by rideViewModel.creatorProfile.collectAsState()
     // Get refreshed passenger profiles
     val refreshedPassengerProfiles by rideViewModel.refreshedPassengerProfiles.collectAsState()
-    
+
     // Load ride details using the observer
     LaunchedEffect(rideId) {
         rideViewModel.observeRideDetails(rideId)
     }
-    
-    // Debug logging for ride details
-    LaunchedEffect(currentRide) {
-        currentRide?.let { ride ->
-            // Fetch creator profile when ride data is available
-            if (ride.creatorEmail.isNotBlank()) {
-                rideViewModel.fetchCreatorProfile(ride.creatorEmail)
-            }
-            // Fetch passenger profiles when ride data is available
-            if (ride.passengers.isNotEmpty()) {
-                rideViewModel.fetchPassengerProfiles(ride.passengers.map { it.email })
-            }
-        }
-    }
-    
-    // Fix for train/flight details not saving to Firebase - with loop prevention
-    val fixAttemptedMap = remember { mutableMapOf<String, Boolean>() }
-    
-    LaunchedEffect(rideId, currentRide?.rideId) {
-        currentRide?.let { ride ->
-            // First, verify that we're actually looking at the requested ride
-            if (ride.rideId != rideId) {
-                // Force refresh to get the correct ride
-                rideViewModel.observeRideDetails(rideId)
-                return@let
-            }
-            
-            // Only proceed if we haven't already attempted to fix this specific ride
-            val rideKey = "${ride.rideId}_${ride.trainNumber}_${ride.trainName}"
-            if (fixAttemptedMap[rideKey] != true && userInfo?.email == ride.creatorEmail) {
-                // Mark this ride as having been checked, regardless of whether we update it
-                fixAttemptedMap[rideKey] = true
-                
-                // Only for train destinations and only if data needs to be fixed
-                if ((ride.destination == "Patna Station" || ride.destination == "Bihta Station") 
-                    && (ride.trainNumber.isNotBlank() || ride.trainName.isNotBlank())) {
-                    rideViewModel.updateTrainDetails(ride.rideId, ride.trainNumber, ride.trainName)
-                } 
-                // Only for airport destination and only if data needs to be fixed
-                else if (ride.destination == "Patna Airport"
-                    && (ride.flightNumber.isNotBlank() || ride.flightName.isNotBlank())) {
-                    rideViewModel.updateFlightDetails(ride.rideId, ride.flightNumber, ride.flightName)
-                }
-            }
-        }
-    }
-    
-    // Dialog states
-    var showDeleteRideDialog by remember { mutableStateOf(false) }
-    var showViewRequestsDialog by remember { mutableStateOf(false) }
-    
+
     // State for confirmation dialogs
     var showLeaveConfirmationDialog by remember { mutableStateOf(false) }
-    var showRemoveConfirmationDialog by remember { mutableStateOf<UserProfile?>(null) } // Store passenger to remove
+    var showRemoveConfirmationDialog by remember { mutableStateOf<UserProfile?>(null) }
     
     // Determine if user is creator or already joined
     val isCreator = userInfo?.email == currentRide?.creatorEmail
@@ -137,9 +103,6 @@ fun RideDetailsScreen(
     val hasRequested = currentRide?.pendingRequests?.any { 
         it.userId == userInfo?.email && it.status == RequestStatus.PENDING 
     } == true
-
-    // Determine if the current user can see phone numbers
-    val canSeePhoneNumbers = isCreator || isPassenger
 
     // Format date and time
     val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
@@ -178,30 +141,40 @@ fun RideDetailsScreen(
         }
     }
 
-    // Delete confirmation dialog
-    if (showDeleteRideDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteRideDialog = false },
-            title = { Text("Delete Ride") },
-            text = { Text("Are you sure you want to delete this ride? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteRideDialog = false
-                        rideViewModel.deleteRide(rideId) {
-                            navController.popBackStack()
-                        }
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteRideDialog = false }) {
-                    Text("Cancel")
+    // Dialog states
+    var showDeleteRideDialog by remember { mutableStateOf(false) }
+    var showViewRequestsDialog by remember { mutableStateOf(false) }
+    
+    // Fix for train/flight details not saving to Firebase - with loop prevention
+    val fixAttemptedMap = remember { mutableMapOf<String, Boolean>() }
+    
+    LaunchedEffect(rideId, currentRide?.rideId) {
+        currentRide?.let { ride ->
+            // First, verify that we're actually looking at the requested ride
+            if (ride.rideId != rideId) {
+                // Force refresh to get the correct ride
+                rideViewModel.observeRideDetails(rideId)
+                return@let
+            }
+            
+            // Only proceed if we haven't already attempted to fix this specific ride
+            val rideKey = "${ride.rideId}_${ride.trainNumber}_${ride.trainName}"
+            if (fixAttemptedMap[rideKey] != true && userInfo?.email == ride.creatorEmail) {
+                // Mark this ride as having been checked, regardless of whether we update it
+                fixAttemptedMap[rideKey] = true
+                
+                // Only for train destinations and only if data needs to be fixed
+                if ((ride.destination == "Patna Station" || ride.destination == "Bihta Station") 
+                    && (ride.trainNumber.isNotBlank() || ride.trainName.isNotBlank())) {
+                    rideViewModel.updateTrainDetails(ride.rideId, ride.trainNumber, ride.trainName)
+                } 
+                // Only for airport destination and only if data needs to be fixed
+                else if (ride.destination == "Patna Airport"
+                    && (ride.flightNumber.isNotBlank() || ride.flightName.isNotBlank())) {
+                    rideViewModel.updateFlightDetails(ride.rideId, ride.flightNumber, ride.flightName)
                 }
             }
-        )
+        }
     }
 
     Scaffold(
@@ -211,13 +184,26 @@ fun RideDetailsScreen(
                 title = { Text("Ride Details") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { currentRide?.let(onChatClick) }) {
-                        Icon(Icons.Default.Chat, contentDescription = "Chat")
-                    }
+                        // Show chat button for everyone
+                        if (currentRide != null) {
+                            IconButton(
+                                onClick = { 
+                                    currentRide?.let { onChatClick(it) }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Chat,
+                                    contentDescription = "Chat"
+                                )
+                            }
+                        }
                 }
             )
         },
@@ -271,7 +257,7 @@ fun RideDetailsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Capture the error value locally to prevent smart cast issues
+            // Use the error value from the parent composable
             val currentError = error
 
             when {
@@ -803,43 +789,6 @@ fun RideDetailsScreen(
                                                     )
                                                 }
                                             }
-                                            
-                                            // Conditionally show creator's phone for accepted passengers
-                                            if (isPassenger && !isCreator && creatorProfile?.phoneNumber?.isNotBlank() == true) {
-                                                // Get context here where it's needed
-                                                val context = LocalContext.current 
-                                                // Create a non-nullable local variable inside the safe block
-                                                val nonNullCreatorProfile = creatorProfile!! 
-                                                
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.clickable {
-                                                        try {
-                                                            // Use the non-nullable variable here
-                                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${nonNullCreatorProfile.phoneNumber}")) 
-                                                            // Use the context variable obtained above
-                                                            context.startActivity(intent) 
-                                                        } catch (e: Exception) {
-                                                            Log.e("RideDetailsScreen", "Failed to dial creator: ${e.message}")
-                                                        }
-                                                    }
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Call,
-                                                        contentDescription = "Creator Phone",
-                                                        tint = MaterialTheme.colorScheme.secondary,
-                                                        modifier = Modifier.size(14.dp)
-                                                    )
-                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(
-                                                        // Use the non-nullable variable here too
-                                                        text = nonNullCreatorProfile.phoneNumber, 
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.secondary
-                                                    )
-                                                }
-                                            }
                                         }
                                     }
                                     
@@ -892,8 +841,8 @@ fun RideDetailsScreen(
                                     ),
                                     onClick = { 
                                         // Refresh ride data before showing requests to ensure we have latest data
-                                        rideViewModel.observeRideDetails(rideId)
-                                        showViewRequestsDialog = true 
+                                                                                 rideViewModel.observeRideDetails(rideId)
+                                         showViewRequestsDialog = true  
                                     }
                                 ) {
                                     Column(
@@ -933,8 +882,7 @@ fun RideDetailsScreen(
                                 isCreator = isCreator,
                                 onRemoveClick = { passenger ->
                                     showRemoveConfirmationDialog = passenger
-                                },
-                                canSeePhoneNumbers = canSeePhoneNumbers
+                                }
                             )
                         }
                         
@@ -1066,6 +1014,32 @@ fun RideDetailsScreen(
             }
         )
     }
+
+    // Delete Ride Confirmation Dialog
+    if (showDeleteRideDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteRideDialog = false },
+            title = { Text("Delete Ride") },
+            text = { Text("Are you sure you want to delete this ride? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        rideViewModel.deleteRide(rideId, onSuccess = {
+                            showDeleteRideDialog = false
+                            onBackClick() // Navigate back after deletion
+                        })
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteRideDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -1075,8 +1049,7 @@ fun PassengersSection(
     creatorEmail: String,
     currentUserEmail: String?,
     isCreator: Boolean,
-    onRemoveClick: (UserProfile) -> Unit,
-    canSeePhoneNumbers: Boolean
+    onRemoveClick: (UserProfile) -> Unit
 ) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(
@@ -1099,8 +1072,7 @@ fun PassengersSection(
                         // Pass the snapshot email for removal, as ID might change
                         // Or ensure removeOrLeavePassenger uses email consistently 
                         onRemoveClick(passengerSnapshot) 
-                    },
-                    showPhoneNumber = canSeePhoneNumbers
+                    }
                 )
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             }
@@ -1113,35 +1085,19 @@ fun PassengerItem(
     passenger: UserProfile,
     isCreatorItem: Boolean,
     showRemoveButton: Boolean,
-    onRemoveClick: () -> Unit,
-    showPhoneNumber: Boolean
+    onRemoveClick: () -> Unit
 ) {
-    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Avatar
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = passenger.displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            // Name and Role
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column {
                 Text(
                     text = passenger.displayName,
@@ -1156,23 +1112,6 @@ fun PassengerItem(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-                // Optional: Display phone number if needed and available
-                 if (showPhoneNumber && passenger.phoneNumber.isNotBlank()) {
-                     Text(
-                         text = passenger.phoneNumber,
-                         style = MaterialTheme.typography.bodySmall,
-                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                         modifier = Modifier.clickable {
-                            try {
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${passenger.phoneNumber}"))
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.e("PassengerItem", "Failed to dial: ${e.message}")
-                                // Optionally show a toast message
-                            }
-                         }
-                     )
-                 }
             }
         }
         
@@ -1244,32 +1183,6 @@ fun JoinRequestItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-            
-            // Info message about phone number sharing
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-                    .background(
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(6.dp)
-                    )
-                    .padding(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Info",
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Accepting will share contact numbers",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
             }
             
             Spacer(modifier = Modifier.height(8.dp))

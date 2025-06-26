@@ -178,80 +178,8 @@ fun MainScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                // Report a Bug Button
-                OutlinedButton(
-                    onClick = {
-                        val url = "https://forms.gle/ybHcwtuZUWBDbBxv7"
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        try {
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            Log.e("MainScreen", "Error opening bug report URL: $url", e)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.BugReport,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Report a Bug",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                
-                Spacer(modifier = Modifier.weight(1f))
             }
         }
-    }
-    
-    // Sign out confirmation dialog - Enhanced
-    if (showSignOutDialog) {
-        AlertDialog(
-            onDismissRequest = { showSignOutDialog = false },
-            title = { 
-                Text(
-                    "Sign Out",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                ) 
-            },
-            text = { 
-                Text(
-                    "Are you sure you want to sign out?",
-                    style = MaterialTheme.typography.bodyLarge
-                ) 
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showSignOutDialog = false
-                        coroutineScope.launch {
-                            authViewModel.signOut()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Sign Out")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSignOutDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 
@@ -385,22 +313,6 @@ fun CabShareTopAppBar(
                     imageVector = Icons.Default.Person,
                     contentDescription = "Profile",
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            
-            // Sign out button
-            IconButton(
-                onClick = onSignOut,
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = "Sign Out",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
