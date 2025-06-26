@@ -16,6 +16,11 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +34,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import com.project.cabshare.ui.theme.CabShareLogo
 import com.project.cabshare.ui.theme.CabShareTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -38,6 +44,7 @@ import com.project.cabshare.data.FirestoreUserRepository
 import com.project.cabshare.models.UserProfile
 import kotlinx.coroutines.launch
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.project.cabshare.auth.AuthState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,13 +54,15 @@ fun UserProfileScreen(
 ) {
     var name by remember { mutableStateOf("") }
     var roll by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
     var isEditMode by remember { mutableStateOf(false) }
     var isFirstTime by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(true) }
-    var showPhoneInfoDialog by remember { mutableStateOf(false) }
     var showErrorDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    
+    // Get the context
+    val context = LocalContext.current
     
     // Create a Firestore repository instance
     val firestoreRepository = remember { FirestoreUserRepository() }
@@ -63,6 +72,15 @@ fun UserProfileScreen(
     
     // Get user info from AuthViewModel
     val userInfo by authViewModel.userInfo.collectAsState()
+    val authState by authViewModel.authState.collectAsState()
+    
+    // Handle authentication state
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Unauthenticated) {
+            // Navigate to login screen
+            onProfileComplete()
+        }
+    }
     
     // User profile from Firestore
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
@@ -82,7 +100,6 @@ fun UserProfileScreen(
                     userProfile = profile
                     name = profile.displayName
                     roll = profile.rollNumber
-                    phone = profile.phoneNumber
                     isFirstTime = false
                 } else {
                     // Profile doesn't exist yet, use auth data and mark as first time
@@ -151,16 +168,6 @@ fun UserProfileScreen(
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
-                    
-                    if (!isFirstTime && !isEditMode) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "View or edit your profile information",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
                 }
             }
             
@@ -201,7 +208,7 @@ fun UserProfileScreen(
                         // Roll number field - auto-filled and not editable
                         OutlinedTextField(
                             value = roll,
-                            onValueChange = { }, // No changes allowed
+                            onValueChange = { },
                             label = { Text("Roll Number") },
                             leadingIcon = {
                                 Icon(
@@ -209,24 +216,11 @@ fun UserProfileScreen(
                                     contentDescription = "Roll"
                                 )
                             },
-                            trailingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Auto-filled",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
+                            enabled = false,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp),
                             shape = RoundedCornerShape(12.dp),
-                            readOnly = true,
-                            supportingText = { 
-                                Text("Auto-filled from your Microsoft ID") 
-                            },
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 disabledTextColor = MaterialTheme.colorScheme.onSurface,
                                 disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
@@ -235,40 +229,6 @@ fun UserProfileScreen(
                                 disabledTrailingIconColor = MaterialTheme.colorScheme.primary,
                                 disabledLabelColor = MaterialTheme.colorScheme.primary,
                             )
-                        )
-                        
-                        OutlinedTextField(
-                            value = phone,
-                            onValueChange = { 
-                                // Only allow digits and limit to 10 characters
-                                if (it.all { char -> char.isDigit() } && it.length <= 10) {
-                                    phone = it 
-                                }
-                            },
-                            label = { Text("Phone Number") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Phone,
-                                    contentDescription = "Phone"
-                                )
-                            },
-                            trailingIcon = {
-                                IconButton(onClick = { showPhoneInfoDialog = true }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Phone Number Privacy",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
-                            supportingText = {
-                                Text("Your number will be shared when you join or accept rides")
-                            },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            shape = RoundedCornerShape(12.dp)
                         )
                     } else {
                         // View Mode UI - Show profile info with styling
@@ -280,20 +240,18 @@ fun UserProfileScreen(
                             icon = Icons.Default.Person
                         )
                         
+                        // Email Field
+                        ProfileField(
+                            label = "Email",
+                            value = userInfo?.email ?: "",
+                            icon = Icons.Default.Info
+                        )
+                        
                         // Roll Number Field
                         ProfileField(
                             label = "Roll Number",
                             value = roll,
                             icon = Icons.Default.AccountBox
-                        )
-                        
-                        // Phone Field
-                        ProfileField(
-                            label = "Phone",
-                            value = phone,
-                            icon = Icons.Default.Phone,
-                            showInfoIcon = true,
-                            onInfoClick = { showPhoneInfoDialog = true }
                         )
                     }
                     
@@ -319,8 +277,7 @@ fun UserProfileScreen(
                                             userId = userEmail,
                                             email = userEmail,
                                             displayName = name,
-                                            rollNumber = finalRoll,
-                                            phoneNumber = phone
+                                            rollNumber = finalRoll
                                         )
                                         
                                         // Save to Firestore
@@ -345,9 +302,7 @@ fun UserProfileScreen(
                                     }
                                 }
                             },
-                            enabled = name.isNotBlank() && 
-                                    roll.isNotBlank() && 
-                                    phone.length == 10,
+                            enabled = name.isNotBlank() && roll.isNotBlank(),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
@@ -403,16 +358,69 @@ fun UserProfileScreen(
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        // Report a Bug Button
+                        OutlinedButton(
+                            onClick = {
+                                val url = "https://forms.gle/ybHcwtuZUWBDbBxv7"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Log.e("UserProfileScreen", "Error opening bug report URL: $url", e)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.BugReport,
+                                contentDescription = "Report a Bug",
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                text = "Report a Bug",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Sign Out Button
+                        OutlinedButton(
+                            onClick = {
+                                showLogoutDialog = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = "Sign Out",
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                text = "Sign Out",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                     }
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
         }
-    }
-
-    if (showPhoneInfoDialog) {
-        PhoneInfoDialog(onDismiss = { showPhoneInfoDialog = false })
     }
 
     // Show a dialog if there's an error with the profile
@@ -441,6 +449,50 @@ fun UserProfileScreen(
                     showErrorDialog = false
                 }) {
                     Text("OK")
+                }
+            }
+        )
+    }
+
+    // Show logout confirmation dialog
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showLogoutDialog = false
+            },
+            title = { 
+                Text(
+                    "Sign Out",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            text = { 
+                Text(
+                    "Are you sure you want to sign out?",
+                    style = MaterialTheme.typography.bodyMedium
+                ) 
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutDialog = false
+                        coroutineScope.launch {
+                            authViewModel.signOut()
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Sign Out")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                }) {
+                    Text("Cancel")
                 }
             }
         )
@@ -503,31 +555,6 @@ fun ProfileField(
     HorizontalDivider(
         modifier = Modifier.padding(start = 40.dp),
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-    )
-}
-
-@Composable
-fun PhoneInfoDialog(onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { 
-            Text(
-                "Phone Number Privacy",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            ) 
-        },
-        text = { 
-            Text(
-                "Your phone number will be shared with other users when you join someone's ride or when you accept someone to join your ride. This is to facilitate communication between riders.",
-                style = MaterialTheme.typography.bodyMedium
-            ) 
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Got it")
-            }
-        }
     )
 }
 

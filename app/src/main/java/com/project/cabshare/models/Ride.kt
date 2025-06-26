@@ -31,6 +31,5 @@ data class UserProfile(
     val email: String = "",
     val userId: String = "",
     val displayName: String = "",
-    val phoneNumber: String = "",
     val rollNumber: String = ""
 ) 

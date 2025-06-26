@@ -108,13 +108,12 @@ class FirestoreUserRepository : UserRepository {
 
     // Helper method to convert UserInfo to UserProfile
     // Ensure the UserProfile model used here matches the one in models/Ride.kt
-    fun userInfoToProfile(userInfo: UserInfo, phoneNumber: String = ""): UserProfile {
+    fun userInfoToProfile(userInfo: UserInfo): UserProfile {
         return UserProfile(
             uid = userInfo.email, // Assuming uid maps to email
             email = userInfo.email,
             userId = userInfo.email, // Assuming userId also maps to email - Check UserProfile definition
             displayName = userInfo.displayName,
-            phoneNumber = phoneNumber,
             rollNumber = userInfo.rollNumber
         )
     }

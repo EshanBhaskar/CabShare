@@ -589,115 +589,86 @@ class FirestoreRideRepositoryImpl : RideRepository {
     }
     
     override suspend fun acceptJoinRequest(rideId: String, requestId: String): Boolean {
-        val rideRef = ridesCollection.document(rideId)
-        val requestRef = requestsCollection.document(requestId)
         var requesterUserId: String? = null
         var rideSource: String = ""
         var rideDestination: String = ""
 
-        try {
-            Log.d(TAG, "Starting acceptJoinRequest for ride $rideId, request $requestId")
-            
-            firestore.runTransaction { transaction ->
-                // Read the current state of the ride
-                val rideSnapshot = transaction.get(rideRef)
-                val ride = rideSnapshot.toObject(Ride::class.java)
-                    ?: throw FirebaseFirestoreException(
-                        "Ride $rideId not found or invalid data",
-                        FirebaseFirestoreException.Code.NOT_FOUND
-                    )
-                
-                // Store ride info for notification
+        val success = withContext(Dispatchers.IO) {
+            try {
+                // Get request data
+                val requestDoc = requestsCollection.document(requestId).get().await()
+                if (!requestDoc.exists()) {
+                    throw IllegalArgumentException("Request $requestId does not exist")
+                }
+                val request = requestDoc.toObject(JoinRequest::class.java)
+                if (request == null) {
+                    throw IllegalArgumentException("Invalid request data")
+                }
+                if (request.status != RequestStatus.PENDING) {
+                    throw IllegalArgumentException("Request is not in pending state")
+                }
+                requesterUserId = request.userId
+
+                // Get ride data
+                val rideDoc = ridesCollection.document(rideId).get().await()
+                if (!rideDoc.exists()) {
+                    throw IllegalArgumentException("Ride does not exist")
+                }
+                val ride = rideDoc.toObject(Ride::class.java)
+                if (ride == null) {
+                    throw IllegalArgumentException("Invalid ride data")
+                }
                 rideSource = ride.source
                 rideDestination = ride.destination
-                Log.d(TAG, "Found ride: ${ride.rideId} from $rideSource to $rideDestination")
-                
-                // Read the current state of the request
-                val requestSnapshot = transaction.get(requestRef)
-                val request = requestSnapshot.toObject(JoinRequest::class.java)
-                    ?: throw FirebaseFirestoreException(
-                        "Request $requestId not found or invalid data",
-                        FirebaseFirestoreException.Code.NOT_FOUND
-                    )
-                requesterUserId = request.userId // Store user ID
-                Log.d(TAG, "Found request from user: $requesterUserId, status: ${request.status}")
 
-                // --- Validation within the transaction ---
-                if (request.status != RequestStatus.PENDING) {
-                    Log.w(TAG, "Attempted to accept non-pending request: $requestId")
-                    return@runTransaction null // Exit gracefully
-                }
-
-                // 2. Check if ride is full
+                // Check if ride is full
                 if (ride.passengers.size >= ride.maxPassengers) {
-                    Log.w(TAG, "Attempted to accept request $requestId for full ride $rideId")
-                    throw RideFullException("Ride is already full. Cannot accept request $requestId.")
+                    throw IllegalArgumentException("Ride is already full")
                 }
 
-                // --- If validations pass, proceed with updates ---
-                val acceptedRequest = request.copy(status = RequestStatus.ACCEPTED)
-                transaction.set(requestRef, acceptedRequest)
+                // Update request status
+                val updatedRequest = request.copy(status = RequestStatus.ACCEPTED)
+                requestsCollection.document(requestId).set(updatedRequest).await()
 
-                val updatedPassengers = ride.passengers.toMutableList().apply { add(request.userProfile) }
-                val updatedPendingRequests = ride.pendingRequests.filter { it.requestId != requestId }
+                // Add passenger to ride and remove from pending requests
+                val updatedPassengers = ride.passengers.toMutableList()
+                updatedPassengers.add(request.userProfile)
+                val updatedPendingRequests = ride.pendingRequests
+                    .filter { it.requestId != requestId }
+                    .toList()
 
-                transaction.update(rideRef, mapOf(
-                    "passengers" to updatedPassengers,
-                    "pendingRequests" to updatedPendingRequests
-                ))
-                Log.d(TAG, "Transaction: Join request accepted: $requestId for ride: $rideId")
-                null // Indicate success
-
-            }.await()
-
-            Log.d(TAG, "Transaction successfully committed for accepting $requestId")
-
-            // --- Create Notification (after successful transaction) ---
-            if (requesterUserId != null && rideSource.isNotEmpty() && rideDestination.isNotEmpty()) {
-                Log.d(TAG, "Preparing to create notification for accepted request: User=$requesterUserId")
-                val rideInfo = "from $rideSource to $rideDestination"
-                val notification = Notification(
-                    userId = requesterUserId!!,
-                    message = "Your request to join the ride $rideInfo has been accepted.",
-                    type = NotificationType.REQUEST_ACCEPTED,
-                    relatedRideId = rideId
-                )
-                // Use CoroutineScope to launch the suspend function
-                CoroutineScope(Dispatchers.IO).launch {
-                    createNotification(notification)
-                }
-            } else {
-                Log.w(TAG, "Could not create notification: userId=$requesterUserId, source=$rideSource, dest=$rideDestination")
-            }
-
-            // Contact exchange logic remains here...
-            try {
-                val ride = getRide(rideId) // Re-fetch ride to get creator info if needed
-                val request = requestRef.get().await().toObject(JoinRequest::class.java)
-                if (ride != null && request != null) {
-                    val contactExchangeId = "${rideId}_${request.userId}"
-                    val contactExchange = hashMapOf(
-                        "rideId" to rideId,
-                        "rideCreator" to ride.creatorEmail,
-                        // Fetching creator phone might require another read if not stored directly
-                        "rideCreatorPhone" to (ride.passengers.find { it.email == ride.creatorEmail }?.phoneNumber ?: ""),
-                        "passenger" to request.userProfile.email,
-                        "passengerPhone" to request.userProfile.phoneNumber,
-                        "exchangeTime" to Date(),
-                        "status" to "ACTIVE"
+                // Update the ride document
+                ridesCollection.document(rideId).update(
+                    mapOf(
+                        "passengers" to updatedPassengers,
+                        "pendingRequests" to updatedPendingRequests
                     )
-                     firestore.collection("contactExchanges").document(contactExchangeId)
-                         .set(contactExchange).await()
-                     Log.d(TAG, "Created contact exchange record for ride: $rideId (post-transaction)")
-                }
+                ).await()
+
+                Log.d(TAG, "Join request accepted: $requestId for ride: $rideId")
+                true // Indicate success
             } catch (e: Exception) {
-                 Log.e(TAG, "Error creating contact exchange post-transaction", e)
+                Log.e(TAG, "Error accepting join request", e)
+                false // Indicate failure
             }
-            return true // Return true on success
-        } catch (e: Exception) {
-            Log.e(TAG, "Error accepting join request", e)
-            return false
         }
+
+        // Create Notification (if acceptance was successful)
+        if (success && requesterUserId != null && rideSource.isNotEmpty() && rideDestination.isNotEmpty()) {
+            val rideInfo = "from $rideSource to $rideDestination"
+            val notification = Notification(
+                userId = requesterUserId!!,
+                message = "Your request to join the ride $rideInfo was accepted.",
+                type = NotificationType.REQUEST_ACCEPTED,
+                relatedRideId = rideId
+            )
+            // Use CoroutineScope to launch the suspend function
+            CoroutineScope(Dispatchers.IO).launch {
+                createNotification(notification)
+            }
+        }
+
+        return success
     }
     
     override suspend fun rejectJoinRequest(rideId: String, requestId: String): Boolean {

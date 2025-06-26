@@ -218,18 +218,7 @@ fun RideHistoryDetailsScreen(
                                         modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                     
-                                    // Direction
-                                    Text(
-                                        text = "Direction: ${
-                                            when (ride.direction) {
-                                                RideDirection.FROM_IITP -> "From IITP"
-                                                RideDirection.TO_IITP -> "To IITP"
-                                            }
-                                        }",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
-                                    
+
                                     // Train/Flight details if available
                                     if (ride.trainNumber.isNotEmpty() || ride.trainName.isNotEmpty()) {
                                         Text(
