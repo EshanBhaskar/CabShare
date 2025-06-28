@@ -13,6 +13,7 @@ CabShare is a modern Android application designed to help IIT Patna students fin
   - Create and join cab rides
   - Real-time ride status updates
   - Ride request and approval system
+  - Ride history to access past rides
 
 - **User Interface**
   - Intuitive navigation
@@ -21,6 +22,7 @@ CabShare is a modern Android application designed to help IIT Patna students fin
 - **Real-time Features**
   - Live ride updates
   - Real-time passenger list updates
+  - Real-time in-ride chat for better communication
   - Automatic ride cleanup for past rides
 
 ## Tech Stack
